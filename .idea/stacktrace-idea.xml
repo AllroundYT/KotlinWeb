@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="StacktraceSettings">
+    <option name="folders">
+      <set>
+        <option value="$PROJECT_DIR$/src/main/kotlin" />
+        <option value="$PROJECT_DIR$/src/main/resources" />
+        <option value="$PROJECT_DIR$/src/test/kotlin" />
+        <option value="$PROJECT_DIR$/src/test/resources" />
+      </set>
+    </option>
+    <option name="packages">
+      <set>
+        <option value="de.allround.kotlinweb" />
+        <option value="net.mineempires.web" />
+      </set>
+    </option>
+  </component>
+</project>
