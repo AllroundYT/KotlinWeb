@@ -2,7 +2,7 @@ package de.allround.kotlinweb.util
 
 object HTMX {
     const val BASE_HTMX: Boolean = true
-    var json_enc: Boolean = false
+    const val JSON_ENC: Boolean = true
     var class_tools: Boolean = false
     var client_side_templates: Boolean = false
     var loading_states: Boolean = false

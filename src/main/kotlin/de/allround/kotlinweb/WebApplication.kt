@@ -1,10 +1,9 @@
-package de.allround.kotlinweb.de.allround.kotlinweb
+package de.allround.kotlinweb
 
-import de.allround.kotlinweb.api.annotations.POST
+import de.allround.kotlinweb.api.rest.POST
 import io.vertx.core.Handler
 import io.vertx.core.Timer
 import io.vertx.core.Vertx
-import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServer
 import io.vertx.core.http.HttpServerRequest
@@ -14,10 +13,8 @@ import io.vertx.ext.auth.User
 import io.vertx.ext.web.*
 import io.vertx.ext.web.sstore.LocalSessionStore
 import io.vertx.ext.web.sstore.SessionStore
-import de.allround.kotlinweb.api.DebugLogger
-import de.allround.kotlinweb.api.annotations.*
-import de.allround.kotlinweb.api.components.Component
-import de.allround.kotlinweb.api.components.Page
+import de.allround.kotlinweb.api.misc.DebugLogger
+import de.allround.kotlinweb.api.rest.*
 import de.allround.kotlinweb.util.HTMX
 import de.allround.kotlinweb.util.MultiMap
 import de.allround.kotlinweb.util.ResourceLoader
@@ -76,11 +73,7 @@ class WebApplication(
 
     private fun invokeMethod(obj: Any, method: Method): Handler<RoutingContext> = Handler { context ->
         val response: HttpServerResponse = context.response()
-        if (response.headWritten()) return@Handler
-        if (response.ended()) {
-            context.next()
-            return@Handler
-        }
+        if (response.headWritten() || response.ended()) return@Handler
 
         val parameters = method.parameters
         val paramsToInvoke = ArrayList<Any?>()
@@ -109,23 +102,19 @@ class WebApplication(
             method.invoke(obj, *paramsToInvoke.toArray())
         }
 
-        if (response.headWritten()) return@Handler
-        if (response.ended()) {
-            context.next()
-            return@Handler
-        }
+        if (response.headWritten() || response.ended()) return@Handler
 
 
         when (result) {
             (result == null) -> {}
-            is JsonObject -> context.end(result.toBuffer())
-            is Buffer -> context.end(result)
-            is Page -> context.end(result.init(context).render(context.session(), this))
-            is Component -> context.end(result.render(context.session(), this, includeStyles = true))
-            else -> context.end(result.toString())
+            else -> {
+                val rawResponse = result.toString()
+                DebugLogger.info("Response", rawResponse)
+                context.end(rawResponse)
+            }
         }
 
-        if (response.headWritten()) return@Handler
+        if (response.headWritten() || response.ended()) return@Handler
         context.next()
     }
 
@@ -237,8 +226,8 @@ class WebApplication(
 
 
     private fun registerEndpoints(obj: Any): WebApplication {
-        obj.javaClass.declaredMethods.forEach { method ->
 
+        obj.javaClass.declaredMethods.forEach { method ->
             registerFailHandler(obj, method)
             registerRequestHandler(obj, method)
         }
@@ -247,8 +236,9 @@ class WebApplication(
     }
 
     private fun initHTMX() {
-        if (HTMX.BASE_HTMX) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/htmx.js")
-        if (HTMX.json_enc) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/json-enc.js")
+        ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/htmx.js")
+        ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/kotlin-web.js")
+        if (HTMX.JSON_ENC) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/json-enc.js")
         if (HTMX.class_tools) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/class-tools.js")
         if (HTMX.path_parameters) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/path-params.js")
         if (HTMX.client_side_templates) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/client-side-templates.js")
@@ -265,7 +255,7 @@ class WebApplication(
         initHTMX()
         router.route("/*").handler(BodyHandler.create())
         router.route("/*").handler(SessionHandler.create(sessionStore))
-        registerStaticResources(HttpMethod.GET, "/static", Path("resources/"))
+        registerStaticResources(HttpMethod.GET, "/kw-internal", Path("resources/"))
 
         endpoints.forEach {
             registerEndpoints(it)

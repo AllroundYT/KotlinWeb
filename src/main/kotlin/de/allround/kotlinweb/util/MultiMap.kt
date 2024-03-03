@@ -35,6 +35,11 @@ class MultiMap<I, T>(val map: ConcurrentMap<I, MutableList<T>> = ConcurrentHashM
         get() = map.isEmpty()
 
 
+    fun add(vararg pair: Pair<I, T>) {
+        pair.forEach {
+            add(it.first, it.second)
+        }
+    }
     fun add(index: I, vararg objects: T) {
         map.compute(index) { _: I, list: MutableList<T>? ->
             var ts = list
