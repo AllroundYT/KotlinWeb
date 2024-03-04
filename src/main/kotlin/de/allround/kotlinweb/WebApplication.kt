@@ -142,7 +142,7 @@ class WebApplication(
                 it.response().sendFile(path.absolutePathString())
             }
 
-            DebugLogger.info(javaClass.simpleName, "Registered static resource ${route + "." + path.extension}")
+            DebugLogger.info(javaClass.simpleName, "Registered static resource ${path.toAbsolutePath()} ${route + "." + path.extension}")
 
         } else {
             path.forEachDirectoryEntry {

@@ -3766,8 +3766,7 @@
                         i.push({time: e.requireElement("expression", r).evaluate()})
                     } else {
                         i.push({
-                            name: e.requireElement("dotOrColonPath", r, "Expected event name").evaluate(),
-                            args: v(r)
+                            name: e.requireElement("dotOrColonPath", r, "Expected event name").evaluate(), args: v(r)
                         })
                     }
                 } while (r.matchToken("or"));
@@ -4914,12 +4913,7 @@
                     }
                 } else {
                     return {
-                        classRefs: o,
-                        attributeRef: i,
-                        elementExpr: a,
-                        from: s,
-                        args: [o, s],
-                        op: function (e, r, n) {
+                        classRefs: o, attributeRef: i, elementExpr: a, from: s, args: [o, s], op: function (e, r, n) {
                             t.nullCheck(n, s);
                             if (r) {
                                 t.forEach(r, (function (e) {
