@@ -1,5 +1,6 @@
 package de.allround.kotlinweb
 
+import de.allround.kotlinweb.api.components.Component
 import de.allround.kotlinweb.api.rest.POST
 import io.vertx.core.Handler
 import io.vertx.core.Timer
@@ -14,27 +15,30 @@ import io.vertx.ext.web.*
 import io.vertx.ext.web.sstore.LocalSessionStore
 import io.vertx.ext.web.sstore.SessionStore
 import de.allround.kotlinweb.api.misc.DebugLogger
+import de.allround.kotlinweb.api.page.Page
 import de.allround.kotlinweb.api.rest.*
-import de.allround.kotlinweb.util.HTMX
 import de.allround.kotlinweb.util.MultiMap
 import de.allround.kotlinweb.util.ResourceLoader
+import de.allround.kotlinweb.util.Settings
 import io.vertx.ext.web.handler.BodyHandler
+import io.vertx.ext.web.handler.HSTSHandler
 import io.vertx.ext.web.handler.SessionHandler
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.function.BiFunction
 import kotlin.io.path.*
 
 
 class WebApplication(
     val vertx: Vertx = Vertx.vertx(),
     debugMode: Boolean = false,
-    val endpoints: MutableList<Any> = ArrayList(),
+    val endpoints: MutableList<Any> = mutableListOf(),
+    val allRouteHandlers: List<Handler<RoutingContext>> = listOf(),
     val loginRoute: String? = null,
     val sessionStore: SessionStore = LocalSessionStore.create(vertx),
-    val authProvider: BiFunction<RoutingContext, Array<String>, Boolean> = BiFunction { _, permissions -> permissions.isEmpty() }
+    val authProvider: Function2<RoutingContext, Array<String>, Boolean> = { _, permissions -> permissions.isEmpty() },
+    val bulmaCss: Boolean = false
 ) {
 
 
@@ -107,6 +111,18 @@ class WebApplication(
 
         when (result) {
             (result == null) -> {}
+            is Page -> {
+                val rawResponse = result.toString()
+                DebugLogger.info("Page", rawResponse)
+                context.end(rawResponse)
+            }
+            is Component -> {
+                val rawResponse = result.toString()
+                val stylesheet = result.buildStylesheet()
+                val styleComponent = Component(type = "style", content = stylesheet.toString())
+                DebugLogger.info("Component", "$styleComponent\n$rawResponse")
+                context.end(rawResponse)
+            }
             else -> {
                 val rawResponse = result.toString()
                 DebugLogger.info("Response", rawResponse)
@@ -118,7 +134,7 @@ class WebApplication(
         context.next()
     }
 
-    fun registerStaticResources(method: HttpMethod, route: String, path: Path) {
+    private fun registerStaticResources(method: HttpMethod, route: String, path: Path) {
         if (path.notExists()) return
         if (path.isRegularFile()) {
 
@@ -153,7 +169,7 @@ class WebApplication(
                         return@handler
                     }
                     it.fail(403)
-                } else if (!authProvider.apply(it, permissions)) {
+                } else if (!authProvider.invoke(it, permissions)) {
                     it.fail(403)
                 } else it.next()
             }
@@ -235,27 +251,21 @@ class WebApplication(
         return this
     }
 
-    private fun initHTMX() {
-        ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/htmx.js")
-        ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/kotlin-web.js")
-        if (HTMX.JSON_ENC) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/json-enc.js")
-        if (HTMX.class_tools) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/class-tools.js")
-        if (HTMX.path_parameters) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/path-params.js")
-        if (HTMX.client_side_templates) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/client-side-templates.js")
-        if (HTMX.loading_states) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/loading-states.js")
-        if (HTMX.preload) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/preload.js")
-        if (HTMX.remove_me) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/remove-me.js")
-        if (HTMX.response_targets) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/response-targets.js")
-        if (HTMX.restored) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/restored.js")
-        if (HTMX.sse) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/sse.js")
-        if (HTMX.ws) ResourceLoader.copyResourcesIntoWorkingDirectory("/htmx/ws.js")
+    private fun copyResourcesIntoStaticDir() {
+        ResourceLoader.copyResources("/hyperscript.js")
+        ResourceLoader.copyResources("/htmx.js")
+        ResourceLoader.copyResources("/json-enc.js")
     }
 
     fun start(port: Int = 80, host: String = "0.0.0.0") {
-        initHTMX()
+        copyResourcesIntoStaticDir()
+
         router.route("/*").handler(BodyHandler.create())
+        allRouteHandlers.forEach {
+            router.route("/*").handler(it)
+        }
         router.route("/*").handler(SessionHandler.create(sessionStore))
-        registerStaticResources(HttpMethod.GET, "/kw-internal", Path("resources/"))
+        registerStaticResources(HttpMethod.GET, Settings.STATIC_ROUTE, Settings.STATIC_DIR)
 
         endpoints.forEach {
             registerEndpoints(it)

@@ -23,6 +23,10 @@ class Stylesheet(val styles: MutableList<Styling> = mutableListOf()) {
             }
         }
 
+        filteredStyles.forEach {
+            builder.append("$it \n")
+        }
+
         return builder.toString()
     }
 

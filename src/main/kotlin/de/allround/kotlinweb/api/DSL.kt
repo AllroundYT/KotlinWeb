@@ -1,18 +1,30 @@
 package de.allround.kotlinweb.api
 
 import de.allround.kotlinweb.api.components.Component
-import de.allround.kotlinweb.api.styles.Styling
+import de.allround.kotlinweb.api.components.NotRenderedComponent
+import de.allround.kotlinweb.api.page.Page
 
-fun root(init: Component.() -> Unit): Component {
+fun div(init: Component.() -> Unit): Component {
     val component = Component(type = "div")
     component.init()
     return component
 }
 
-fun style(selector: String, init: Styling.() -> Unit): Styling {
-    val styling = Styling(selector)
-    styling.init()
-    return styling
+fun root(init: Component.() -> Unit): Component {
+    val component = NotRenderedComponent()
+    component.init()
+    return component
+}
+
+
+fun page(title: String = "Kotlin Web generated WebPage", lang: String = "en", init: Component.(Page) -> Unit): Page {
+    val head = Component(type = "head")
+    val body = Component(type = "body")
+    val page = Page(lang = lang, head = head, body = body)
+
+    head.children.add(Component(type = "title", content = title))
+    body.init(page)
+    return page
 }
 
 val Number.px: String

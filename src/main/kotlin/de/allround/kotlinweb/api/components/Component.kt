@@ -1,9 +1,7 @@
 package de.allround.kotlinweb.api.components
 
 import de.allround.kotlinweb.api.action.Action
-import de.allround.kotlinweb.api.action.HtmxAction
-import de.allround.kotlinweb.api.action.ScriptAction
-import de.allround.kotlinweb.api.action.misc.Trigger
+import de.allround.kotlinweb.api.action.trigger.Trigger
 import de.allround.kotlinweb.api.styles.Stylesheet
 import de.allround.kotlinweb.api.styles.Styling
 
@@ -21,16 +19,31 @@ open class Component(
     val init: (Component.() -> Unit)? = null,
 ) {
 
+    fun addAttribute(key: String, value: String, separator: String = " ") {
+        if (attributes[key] == null) {
+            attributes[key] = value
+        } else{
+            attributes[key] += "$separator$value"
+        }
+    }
 
     init {
         init?.let { it() }
     }
 
-    fun buildStylesheet(): Stylesheet = Stylesheet(styles = styles)
+    fun buildStylesheet(): Stylesheet {
+        val stylesheet = Stylesheet(styles = styles)
+        children.forEach {
+            stylesheet.append(it.buildStylesheet())
+        }
+        return stylesheet
+    }
 
     override fun toString(): String {
         //actions
-        actions.forEach { it.apply(this) }
+        actions.forEach {
+            it.apply()
+        }
 
         //classes
         var classAttribute = attributes["class"] ?: ""
@@ -87,15 +100,37 @@ open class Component(
         return component
     }
 
+
     fun br(init: (Component.() -> Unit) = {}): Component {
-        val br = Component(type = "br", single = true)
-        init?.let { br.it() }
-        children.add(br)
-        return br
+        val component = Component(type = "br", single = true)
+        init.let { component.it() }
+        children.add(component)
+        return component
     }
 
-    fun newLine(init: (Component.() -> Unit) = {}): Component {
-        return br(init = init)
+    fun linebreak(init: (Component.() -> Unit) = {}): Component {
+        val component = Component(type = "br", single = true)
+        init.let { component.it() }
+        children.add(component)
+        return component
+    }
+
+    fun script(src: String? = null, content: String? = null, init: (Component.() -> Unit) = {}): Component {
+        val component = Component(type = "script")
+        init.let { component.it() }
+        if (src != null) {
+            component.attributes["src"] = src
+        } else if (content != null) {
+            component.content = content
+        } else {
+            return component
+        }
+        children.add(component)
+        return component
+    }
+
+    fun isOfType(type: String): Boolean {
+        return type == this.type
     }
 
     fun text(type: TextType = TextType.TEXT, href: String? = null, text: String, init: (Component.() -> Unit) = {}): Component {
@@ -108,9 +143,10 @@ open class Component(
             TextType.H6 -> "h6"
             TextType.TEXT -> "p"
             TextType.LINK -> "a"
+            TextType.SPAN -> "span"
         }
         val component = Component(type = actualString)
-        init?.let { component.it() }
+        init.let { component.it() }
         if (type == TextType.LINK && href != null) {
             component.attributes["href"] = href
         }
@@ -155,18 +191,16 @@ open class Component(
         return component
     }
 
-    fun htmx(trigger: Trigger, init: (HtmxAction.(Component) -> Unit) = {}) {
-        val action = HtmxAction(trigger) {
-            this.init(it)
-        }
+    open fun on(trigger: Trigger, init: (Action.(Component) -> Unit) = {}) {
+        val action = Action(Action.Type.NONE,this,trigger)
+        action.init(this)
         actions.add(action)
     }
 
-    fun script(trigger: Trigger, init: (ScriptAction.() -> Unit) = {}) {
-        val action = ScriptAction(trigger) {
-            this.init()
-        }
-        actions.add(action)
+    fun style(selector: String, init: Styling.() -> Unit) {
+        val styling = Styling(selector)
+        styling.init()
+        styles.add(styling)
     }
 }
 

@@ -6,11 +6,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 object ResourceLoader {
-    fun copyResourcesIntoWorkingDirectory(vararg resources: String) {
+
+    fun copyResources(vararg resources: String) {
         for (resource in resources) {
             println("Loading resource... $resource")
 
-            val path = Path.of("resources", *if (resource.startsWith("/")) resource.substring(1)
+            val path = Path.of(Settings.STATIC_DIR.toAbsolutePath().toString(), *if (resource.startsWith("/")) resource.substring(1)
                 .split("/".toRegex()).dropLastWhile { it.isEmpty() }
                 .toTypedArray() else resource.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
             )
