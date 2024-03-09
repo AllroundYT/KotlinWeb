@@ -1,17 +1,24 @@
 package de.allround.kotlinweb.api.styles
 
 import java.awt.Color
+import java.awt.Font
+import java.net.URL
 
 open class Style(
-    val name: String, val value: Any
+    val name: String, val value: Any, var inherit: Boolean = false, var unset: Boolean = false
 ) {
 
     override fun toString(): String {
-        return when (value) {
-            is Number -> "$name: ${value};"
-            is Color -> "$name: rgb(${value.red},${value.green},${value.blue});"
-            is Enum<*> -> "$name: ${value.name.lowercase()};"
-            else -> "$name: ${value};"
-        }
+        return "$name: ${
+            when (value) {
+                is Number -> value
+                is Color -> rgb(value)
+                is Enum<*> -> value.name.replace("-", "").lowercase()
+                is URL -> "url($value)"
+                is Font -> "'${value.fontName}', ${value.family}"
+                else -> value
+            }
+        };"
     }
+
 }
