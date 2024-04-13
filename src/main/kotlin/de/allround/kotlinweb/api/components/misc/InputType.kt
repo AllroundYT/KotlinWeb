@@ -1,4 +1,4 @@
-package de.allround.kotlinweb.api.components
+package de.allround.kotlinweb.api.components.misc
 
 enum class InputType(val value: String? = null) {
     TEXT("text"),

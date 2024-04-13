@@ -1,7 +1,6 @@
 package de.allround.kotlinweb.api.styles
 
 import de.allround.kotlinweb.api.components.Component
-import de.allround.kotlinweb.api.styles.styles.Styling
 
 class Stylesheet(val styles: MutableList<Styling> = mutableListOf()) {
 

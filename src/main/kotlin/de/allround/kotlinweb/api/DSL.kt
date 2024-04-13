@@ -1,8 +1,9 @@
 package de.allround.kotlinweb.api
 
+import de.allround.kotlinweb.api.components.ChildrenRenderer
 import de.allround.kotlinweb.api.components.Component
-import de.allround.kotlinweb.api.components.NotRenderedComponent
 import de.allround.kotlinweb.api.page.Page
+import de.allround.kotlinweb.api.styles.Styling
 
 fun div(init: Component.() -> Unit): Component {
     val component = Component(type = "div")
@@ -10,8 +11,8 @@ fun div(init: Component.() -> Unit): Component {
     return component
 }
 
-fun root(init: Component.() -> Unit): Component {
-    val component = NotRenderedComponent()
+fun fragment(init: Component.() -> Unit): Component {
+    val component = ChildrenRenderer()
     component.init()
     return component
 }
@@ -21,10 +22,16 @@ fun page(title: String = "Kotlin Web generated WebPage", lang: String = "en", in
     val head = Component(type = "head")
     val body = Component(type = "body")
     val page = Page(lang = lang, head = head, body = body)
-
-    head.children.add(Component(type = "title", content = title))
+    head.addChild(Component(type = "title", innerHTML = title))
     body.init(page)
     return page
+}
+
+fun style(selector: String = "root", styles: Map<String,Any> = mapOf(),init: Styling.() -> Unit = {}): Styling {
+    val styling = Styling(selector)
+    styles.forEach { (name, value) -> styling.add(name, value) }
+    styling.init()
+    return styling
 }
 
 val Number.px: String
@@ -59,3 +66,6 @@ val Number.mm: String
 
 val Number.cm: String
     get() = "${this}cm"
+
+val Number.deg: String
+    get() = "${this}deg"

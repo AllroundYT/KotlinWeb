@@ -18,7 +18,7 @@ class RequestAction(
     var select: String? = null,
     var vals: String? = null,
     var confirm: String? = null,
-    val include: MutableList<Component> = mutableListOf()
+    val include: MutableList<String> = mutableListOf()
 ) : Action(type = Type.HTMX, component = component, trigger = trigger) {
     override fun build() {
         val trigger = this.trigger.asHtmxTrigger()
@@ -46,10 +46,8 @@ class RequestAction(
         if (include.isNotEmpty()) {
             val attributeBuilder = StringBuilder()
             include.forEach {
-                if (it.id == null) it.id = UUID.randomUUID().toString()
-
                 if (attributeBuilder.isNotEmpty()) attributeBuilder.append(", ")
-                attributeBuilder.append("${it.id}")
+                attributeBuilder.append(it)
             }
 
             attributes["hx-include"] = attributeBuilder.toString()

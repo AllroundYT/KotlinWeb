@@ -7,6 +7,8 @@
         <option value="$PROJECT_DIR$/src/main/resources" />
         <option value="$PROJECT_DIR$/src/test/kotlin" />
         <option value="$PROJECT_DIR$/src/test/resources" />
+        <option value="$PROJECT_DIR$/target/generated-sources/annotations" />
+        <option value="$PROJECT_DIR$/target/generated-test-sources/test-annotations" />
       </set>
     </option>
     <option name="packages">

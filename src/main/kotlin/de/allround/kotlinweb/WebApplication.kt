@@ -1,10 +1,17 @@
 package de.allround.kotlinweb
 
+import de.allround.kotlinweb.api.action.htmx.server.ServerActions
 import de.allround.kotlinweb.api.components.Component
-import de.allround.kotlinweb.api.rest.POST
+import de.allround.kotlinweb.api.misc.DebugLogger
+import de.allround.kotlinweb.api.page.Page
+import de.allround.kotlinweb.api.rest.*
+import de.allround.kotlinweb.api.styles.GeneratedStylesheet
+import de.allround.kotlinweb.util.ResourceLoader
+import de.allround.kotlinweb.util.Settings
+import io.vertx.core.Future
 import io.vertx.core.Handler
-import io.vertx.core.Timer
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServer
 import io.vertx.core.http.HttpServerRequest
@@ -12,27 +19,17 @@ import io.vertx.core.http.HttpServerResponse
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.User
 import io.vertx.ext.web.*
+import io.vertx.ext.web.handler.BodyHandler
+import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
 import io.vertx.ext.web.sstore.SessionStore
-import de.allround.kotlinweb.api.misc.DebugLogger
-import de.allround.kotlinweb.api.page.Page
-import de.allround.kotlinweb.api.rest.*
-import de.allround.kotlinweb.util.MultiMap
-import de.allround.kotlinweb.util.ResourceLoader
-import de.allround.kotlinweb.util.Settings
-import io.vertx.ext.web.handler.BodyHandler
-import io.vertx.ext.web.handler.HSTSHandler
-import io.vertx.ext.web.handler.SessionHandler
 import java.lang.reflect.Method
 import java.nio.file.Path
-import java.util.*
-import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
 
 
 class WebApplication(
     val vertx: Vertx = Vertx.vertx(),
-    debugMode: Boolean = false,
     val endpoints: MutableList<Any> = mutableListOf(),
     val allRouteHandlers: List<Handler<RoutingContext>> = listOf(),
     val loginRoute: String? = null,
@@ -41,39 +38,15 @@ class WebApplication(
     val bulmaCss: Boolean = false
 ) {
 
-
-    private val styles: MultiMap<String, Pair<String, String>> = MultiMap()
-    private val halfHourTimer: Timer = vertx.timer(30, TimeUnit.MINUTES)
     private val loginRouteSet: Boolean get() = loginRoute != null
     private val httpServer: HttpServer = vertx.createHttpServer()
     private val router: Router = Router.router(vertx)
 
 
-    fun registerStyles(session: Session, style: String): String {
-        val id = UUID.randomUUID().toString().lowercase().replace("-", "")
-        styles.add(session.id(), id to style)
-        return id
-    }
-
-    init {
-        DebugLogger.isEnabled = debugMode
-
-        halfHourTimer.onComplete {
-            styles.map.forEach { (sessionId, _) ->
-                sessionStore.get(sessionId).onComplete {
-                    if (it.failed() || it.result() == null || it.result().isDestroyed) {
-                        this.styles.remove(sessionId)
-                    }
-                }
-            }
-        }
-    }
-
     private fun registerFailHandler(obj: Any, method: Method) {
         if (!method.isAnnotationPresent(Fail::class.java)) return
         router.errorHandler(method.getAnnotation(Fail::class.java).statusCode, invokeMethod(obj, method))
     }
-
 
     private fun invokeMethod(obj: Any, method: Method): Handler<RoutingContext> = Handler { context ->
         val response: HttpServerResponse = context.response()
@@ -107,31 +80,59 @@ class WebApplication(
         }
 
         if (response.headWritten() || response.ended()) return@Handler
+        sendResponseIfNotNull(result, context)
+    }
 
-
-        when (result) {
-            (result == null) -> {}
+    private fun sendResponseIfNotNull(response: Any?, context: RoutingContext) {
+        when (response) {
+            (response == null) -> {
+                if (context.response().headWritten() || context.response().ended()) return
+                context.next()
+            }
+            is Future<out Any> -> {
+                DebugLogger.info("Future", response.toString())
+                response.onSuccess {
+                    DebugLogger.info("Future - Success", response.toString())
+                    sendResponseIfNotNull(it, context)
+                }.onFailure {
+                    DebugLogger.info("Future - Failure", response.toString())
+                    context.fail(it)
+                }
+            }
             is Page -> {
-                val rawResponse = result.toString()
-                DebugLogger.info("Page", rawResponse)
-                context.end(rawResponse)
+                val renderedPage = response.render(context)
+                DebugLogger.info("Page", renderedPage)
+                context.response().putHeader("Content-Type", "text/html")
+                context.end(renderedPage)
             }
             is Component -> {
-                val rawResponse = result.toString()
-                val stylesheet = result.buildStylesheet()
-                val styleComponent = Component(type = "style", content = stylesheet.toString())
-                DebugLogger.info("Component", "$styleComponent\n$rawResponse")
-                context.end(rawResponse)
+                val stylesheet = response.buildStylesheet()
+
+                val sessionStylesheet = GeneratedStylesheet.get(context.session())
+                val compiledStylesheet: String =
+                    if (stylesheet.styles.isNotEmpty() && !sessionStylesheet.containsStylesheet(stylesheet)) {
+                        sessionStylesheet.append(stylesheet)
+                        GeneratedStylesheet.asComponent(context.session()).toString()
+                    } else {
+                        ""
+                    }
+                val compiledComponent = "$compiledStylesheet\n$response"
+                DebugLogger.info("Component", compiledComponent)
+                context.response().putHeader("Content-Type", "text/html")
+                context.end(compiledComponent)
+            }
+            is Buffer -> {
+                val resultString = response.toJsonObject().toString()
+                context.end(resultString)
             }
             else -> {
-                val rawResponse = result.toString()
-                DebugLogger.info("Response", rawResponse)
-                context.end(rawResponse)
+                if (response != null) {
+                    val resultAsString = response.toString()
+                    DebugLogger.info("Response", resultAsString)
+                    context.end(resultAsString)
+                }
             }
         }
-
-        if (response.headWritten() || response.ended()) return@Handler
-        context.next()
     }
 
     private fun registerStaticResources(method: HttpMethod, route: String, path: Path) {
@@ -142,7 +143,10 @@ class WebApplication(
                 it.response().sendFile(path.absolutePathString())
             }
 
-            DebugLogger.info(javaClass.simpleName, "Registered static resource ${path.toAbsolutePath()} ${route + "." + path.extension}")
+            DebugLogger.info(
+                javaClass.simpleName,
+                "Registered static resource ${path.toAbsolutePath()} ${route + "." + path.extension}"
+            )
 
         } else {
             path.forEachDirectoryEntry {
@@ -170,7 +174,7 @@ class WebApplication(
                     }
                     it.fail(403)
                 } else if (!authProvider.invoke(it, permissions)) {
-                    it.fail(403)
+                    it.redirect("/")
                 } else it.next()
             }
         }
@@ -240,7 +244,6 @@ class WebApplication(
         )
     }
 
-
     private fun registerEndpoints(obj: Any): WebApplication {
 
         obj.javaClass.declaredMethods.forEach { method ->
@@ -265,6 +268,7 @@ class WebApplication(
             router.route("/*").handler(it)
         }
         router.route("/*").handler(SessionHandler.create(sessionStore))
+        registerEndpoints(ServerActions)
         registerStaticResources(HttpMethod.GET, Settings.STATIC_ROUTE, Settings.STATIC_DIR)
 
         endpoints.forEach {

@@ -5,27 +5,27 @@ import de.allround.kotlinweb.api.action.trigger.Trigger
 import de.allround.kotlinweb.api.components.Component
 
 class ClassAction {
-    class Add(private val clazz: String, component: Component, trigger: Trigger) : Action(
+    class Add(private val clazz: String, val target: String = "me", component: Component, trigger: Trigger) : Action(
         type = Type.HYPERSCRIPT,
         component = component,
         trigger = trigger
     ) {
-        override fun toString(): String = "add .$clazz to me "
+        override fun toString(): String = "add .$clazz to $target "
     }
 
-    class Remove(private val clazz: String, component: Component, trigger: Trigger) : Action(
+    class Remove(private val clazz: String, val target: String = "me", component: Component, trigger: Trigger) : Action(
         type = Type.HYPERSCRIPT,
         component = component,
         trigger = trigger
     ) {
-        override fun toString(): String = "remove .$clazz from me "
+        override fun toString(): String = "remove .$clazz from $target "
     }
 
-    class Toggle(private val clazz: String, component: Component, trigger: Trigger) : Action(
+    class Toggle(private val clazz: String, val target: String = "me", component: Component, trigger: Trigger) : Action(
         type = Type.HYPERSCRIPT,
         component = component,
         trigger = trigger
     ) {
-        override fun toString(): String = "toggle .$clazz on me "
+        override fun toString(): String = "toggle .$clazz on $target "
     }
 }

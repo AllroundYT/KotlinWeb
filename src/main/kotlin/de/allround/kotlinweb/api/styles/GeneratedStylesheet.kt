@@ -40,7 +40,7 @@ object GeneratedStylesheet {
     }
 
     fun asComponent(session: Session): Component {
-        return Component(type = "style", id = "generated-styles", content = get(session).toString()) {
+        return Component(type = "style", id = "generated-styles", innerHTML = get(session).toString()) {
             attributes["hx-swap-oob"] = "true"
         }
     }

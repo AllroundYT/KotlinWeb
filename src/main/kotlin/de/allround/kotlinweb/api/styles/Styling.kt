@@ -1,6 +1,7 @@
-package de.allround.kotlinweb.api.styles.styles
+package de.allround.kotlinweb.api.styles
 
-import de.allround.kotlinweb.api.styles.Style
+import de.allround.kotlinweb.api.styles.styles.*
+import de.allround.kotlinweb.api.styles.styles.TextAlign
 import java.awt.Color
 import java.awt.Font
 import java.net.URL
@@ -16,6 +17,7 @@ class Styling(
     }
 
     override fun toString(): String {
+
         val builder = StringBuilder()
 
         builder.append(selector)
@@ -29,13 +31,16 @@ class Styling(
         return builder.toString()
     }
 
-    fun add(name: String, vararg value: Any): Style {
+    fun add(name: String, value: Any): Style {
         styles.removeIf { it.name == name }
         val style = Style(name, value)
         append(style)
         return style
     }
 
+    fun justifyContent(justifyContent: JustifyContent): Style = add("justify-content", justifyContent)
+    fun textDecoration(textDecoration: TextDecoration): Style = add("text-decoration", textDecoration)
+    fun content(content: Any?): Style = add("content", content ?: "''")
     fun fontStyle(style: FontStyle): Style = add("font-style", style)
     fun fontVariant(variant: FontVariant): Style = add("font-variant", variant)
     fun fontWeight(weight: FontWeight): Style = add("font-weight", weight)
@@ -43,6 +48,7 @@ class Styling(
     fun fontSize(size: String): Style = add("font-size", size)
     fun fontFamily(font: Font): Style = add("font-family", font.family)
     fun fontFamily(family: String): Style = add("font-family", family)
+    fun lineHeight(lineHeight: String): Style = add("line-height",lineHeight)
     fun textAlign(align: TextAlign): Style = add("text-align", align)
     fun letterSpacing(space: LetterSpacing): Style = add("letter-spacing", space)
     fun letterSpacing(space: String): Style = add("letter-spacing", space)
@@ -67,6 +73,7 @@ class Styling(
     fun resize(resize: Resize): Style = add("resize", resize)
     fun icon(icon: Icon): Style = add("icon", icon)
     fun icon(icon: URL): Style = add("icon", icon)
+    fun background(background: Any): Style = add("background", background)
     fun backgroundSize(size: BackgroundSize): Style = add("background-size", size)
     fun backgroundSize(size: String): Style = add("background-size", size)
     fun backgroundImage(image: String): Style = add("background-image", image)
@@ -158,7 +165,7 @@ class Styling(
     fun gridRows(rows: Grid): Style = add("grid-rows", rows)
     fun gridColumns(columns: String): Style = add("grid-columns", columns)
     fun gridRows(rows: String): Style = add("grid-rows", rows)
-    fun listStyleType(type: ListStyleType): Style = add("list-style-type", type)
+    fun listStyle(type: ListStyle): Style = add("list-style-type", type)
     fun listStylePosition(position: String): Style = add("list-style-position", position)
     fun listStyleImage(image: URL?): Style = add("list-style-image", image ?: "none")
     fun markerOffset(offset: String?): Style = add("marker-offset", offset ?: "auto")
@@ -180,7 +187,7 @@ class Styling(
     fun targetNew(new: TargetNew): Style = add("target-new", new)
     fun targetPosition(position: TargetPosition): Style = add("target-position", position)
     fun fit(fit: MediaFit): Style = add("fit", fit)
-    fun fitPosition(first: MediaFitPosition, second: String): Style = add("fit-position", first, second)
+    fun fitPosition(first: MediaFitPosition, second: String): Style = add("fit-position", "${first.name.lowercase().replace("_","-")} $second")
     fun fitPosition(position: String): Style = add("fit-position", position)
     fun orphans(orphans: Int): Style = add("orphans", orphans)
     fun imageOrientation(orientation: String?): Style = add("image-orientation", orientation ?: "auto")

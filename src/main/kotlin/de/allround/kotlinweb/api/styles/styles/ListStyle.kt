@@ -1,7 +1,7 @@
 package de.allround.kotlinweb.api.styles.styles
 
 // List and Markers properties
-enum class ListStyleType {
+enum class ListStyle {
     NONE,
     ASTERIKS,
     BOX,

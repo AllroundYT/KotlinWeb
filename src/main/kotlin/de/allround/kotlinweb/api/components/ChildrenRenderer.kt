@@ -1,9 +1,9 @@
 package de.allround.kotlinweb.api.components
 
-class NotRenderedComponent: Component(type = "") {
+class ChildrenRenderer: Component(type = "") {
     override fun toString(): String {
         val builder = StringBuilder()
-        children.forEach {
+        this.children.forEach {
             builder.append(it.toString()).append("\n")
         }
         return builder.toString()
