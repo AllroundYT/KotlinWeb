@@ -16,6 +16,15 @@
         <kotlin.compiler.jvmTarget>21</kotlin.compiler.jvmTarget>
     </properties>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub AllroundYT Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/AllroundYT/KotlinWeb</url>
+        </repository>
+    </distributionManagement>
+
+
     <repositories>
         <repository>
             <id>mavenCentral</id>
