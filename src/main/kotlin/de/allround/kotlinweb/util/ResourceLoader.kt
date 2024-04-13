@@ -11,10 +11,7 @@ object ResourceLoader {
         for (resource in resources) {
             println("Loading resource... $resource")
 
-            val path = Path.of(Settings.STATIC_DIR.toString(), *if (resource.startsWith("/")) resource.substring(1)
-                .split("/".toRegex()).dropLastWhile { it.isEmpty() }
-                .toTypedArray() else resource.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            )
+            val path = Path.of(resource)
             try {
                 if (path.parent != null) {
                     Files.createDirectories(path.parent)
