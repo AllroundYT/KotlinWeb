@@ -86,6 +86,7 @@ class EndpointRegistry(private val webApplication: WebApplication) {
 
                 if (errorCode != null) {
                     router.errorHandler(errorCode!!, buildHandler(endpoint, method))
+                    println("Error Route added: $errorCode ${javaClass.simpleName}")
                     return@methodRegistration
                 }
 
@@ -119,6 +120,7 @@ class EndpointRegistry(private val webApplication: WebApplication) {
 
 
                 router.route(routeType.httpMethod!!, finalRoute).handler(buildHandler(endpoint, method))
+                println("Route added: $finalRoute ${routeType.httpMethod!!} ${javaClass.simpleName}")
             }
         }
     }

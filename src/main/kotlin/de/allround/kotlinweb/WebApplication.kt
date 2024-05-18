@@ -1,5 +1,8 @@
 package de.allround.kotlinweb
 
+import de.allround.kotlinweb.api.action.htmx.server.ServerActions
+import de.allround.kotlinweb.api.annotations.methods.GET
+import de.allround.kotlinweb.util.ResourceLoader
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServer
@@ -18,14 +21,14 @@ class WebApplication(
     internal val authManagement: AuthManagement = AuthManagement.DefaultImplementation
 ) {
 
-    private val endpointRegistryOLD: EndpointRegistry = EndpointRegistry(this)
+    private val endpointRegistry: EndpointRegistry = EndpointRegistry(this)
     private val preRouteHandlers: MutableSet<Handler<RoutingContext>> = HashSet()
     internal val loginRouteSet: Boolean get() = loginRoute != null
     private val httpServer: HttpServer = vertx.createHttpServer()
     private val router: Router = Router.router(vertx)
 
     fun registerEndpoints(vararg obj: Any): WebApplication {
-        endpointRegistryOLD.endpoints.addAll(obj)
+        endpointRegistry.endpoints.addAll(obj)
         return this
     }
 
@@ -33,16 +36,36 @@ class WebApplication(
         preRouteHandlers.addAll(handlers)
         return this
     }
-
+    
 
     fun start(port: Int = 80, host: String = "0.0.0.0") {
+
+        ResourceLoader.copyResources("/htmx.js","/hyperscript.js","/json-enc.js")
+        
+
         router.route("/*").handler(BodyHandler.create())
         preRouteHandlers.forEach {
             router.route("/*").handler(it)
         }
         router.route("/*").handler(SessionHandler.create(sessionStore))
 
-        endpointRegistryOLD.register(router)
+        registerEndpoints(ServerActions)
+        registerEndpoints(object : Any() {
+            @GET("/static/htmx")
+            fun getHtmxSource(context: RoutingContext) {
+                context.response().sendFile("./static/htmx.js")
+            }
+            @GET("/static/hyperscript")
+            fun getHyperscriptSource(context: RoutingContext) {
+                context.response().sendFile("./static/hyperscript.js")
+            } 
+            @GET("/static/json-enc")
+            fun getJsonEncSource(context: RoutingContext) {
+                context.response().sendFile("./static/json-enc.js")
+            }
+        })
+
+        endpointRegistry.register(router)
 
         httpServer.exceptionHandler {
             it.printStackTrace(System.err)

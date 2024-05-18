@@ -1,22 +1,31 @@
 package de.allround.kotlinweb.api.html
 
+import de.allround.kotlinweb.api.action.Action
+import de.allround.kotlinweb.api.action.trigger.Trigger
 import de.allround.kotlinweb.util.Util.ESCAPE_HTML4
 import java.util.*
+import kotlin.collections.ArrayList
 
 
-open class Component(
-    var id: String = "ID${UUID.randomUUID().toString().replace(" - ","")}",
+open class Component<T : Component<T>>(
+    var id: String = "ID${UUID.randomUUID().toString().replace("-","")}",
     var classes: MutableSet<String> = mutableSetOf(),
-    protected var children: MutableList<Component> = mutableListOf(),
+    protected var children: MutableList<Component<*>> = mutableListOf(),
     val type: String,
     var single: Boolean = false,
     var attributes: MutableMap<String, String> = mutableMapOf(),
     var innerHTML: Any? = null,
     var renderAsChildren: Boolean = true,
-    onInit: (Component.() -> Unit)? = null,
+    val componentInit: T.() -> Unit = {}
 ) {
 
-    var parent: Component? = null
+    open fun init() {
+        (this as T).componentInit()
+    }
+
+    val actions: MutableList<Action> = ArrayList()
+
+    var parent: Component<*>? = null
         set(value) = if (parent != null) {
             throw IllegalStateException("Parent already set")
         } else {
@@ -31,12 +40,16 @@ open class Component(
         }
     }
 
-    init {
-        onInit?.let { it() }
-    }
-
 
     override fun toString(): String {
+
+        init()
+
+
+        actions.forEach {
+            it.apply()
+        }
+
         //classes
         var classAttribute = attributes["class"] ?: ""
         classes.forEach { classAttribute += " $it" }
@@ -93,20 +106,31 @@ open class Component(
         this.classes.addAll(classes)
     }
 
-    fun addChild(component: Component) {
+    open fun <T : Component<T>> add(component: T): T {
         children.add(component)
         component.parent = this
+        return component
     }
 
-    fun addAsFirstChild(component: Component) {
+    open fun <T : Component<T>> first(component: T): T {
         children.addFirst(component)
         component.parent = this
+        return component
     }
 
-    fun addAsLastChild(component: Component) {
+    open fun <T : Component<T>> last(component: T): T {
         children.addLast(component)
         component.parent = this
+        return component
     }
+
+    open fun on(trigger: Trigger, init: (Action.(T) -> Unit) = {}) {
+        val action = Action(Action.Type.NONE,this,trigger)
+        action.init(this as T)
+        actions.add(action)
+    }
+
+
 }
 
 
