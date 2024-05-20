@@ -2,7 +2,7 @@ package de.allround.kotlinweb.api.html
 
 import de.allround.kotlinweb.api.html.tags.*
 
-class Page(
+open class Page(
     val lang: String = "en",
     val title: String = "Generated with KotlinWeb",
     val pageInit: Page.(head: Component<Head>, body: Component<Body>) -> Unit
